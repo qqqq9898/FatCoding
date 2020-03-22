@@ -18,7 +18,7 @@ def ml_loop():
     is behind of the current frame in the game process. Try to decrease the fps
     to avoid this situation.
     """
-
+    ball_position_history = []
     # === Here is the execution order of the loop === #
     # 1. Put the initialization code here.
     ball_served = False
@@ -30,6 +30,17 @@ def ml_loop():
     while True:
         # 3.1. Receive the scene information sent from the game process.
         scene_info = comm.get_scene_info()
+        ball_position_history.append(scene_info.ball)
+        #判定球為上升還是落下
+        if (len(ball_position_history)) == 1:
+            ball_godown = 0
+        elif ball_position_history[-1][1] - ball_position_history[-2][1] > 0: #[-1]代表倒數最後一列
+            ball_godown = 1
+            vy = ball_position_history[-1][1]-ball_position_history[-2][1]
+            vx = ball_position_history[-1][0]-ball_position_history[-2][0]
+            m = vy/vx
+        else:
+            ball_godown = 0
 
         # 3.2. If the game is over or passed, the game process will reset
         #      the scene and wait for ml process doing resetting job.
@@ -50,10 +61,17 @@ def ml_loop():
             ball_served = True
         else:
             ball_x = scene_info.ball[0] #the x of tuple(x, y)
+            ball_y = scene_info.ball[1]
             platform_x = scene_info.platform[0]
-            if ball_x > platform_x:
-                comm.send_instruction(scene_info.frame, PlatformAction.MOVE_RIGHT)
-            if ball_x < platform_x:
-                comm.send_instruction(scene_info.frame, PlatformAction.MOVE_LEFT)
-            else:
-                comm.send_instruction(scene_info.frame, PlatformAction.NONE)
+            if ball_godown == 1 and ball_y >= 90:
+                final_x = (400 - ball_y)/m + ball_x
+                if final_x > 200:
+                    final_x = 200 - (final_x - 200)
+                elif final_x < 0:
+                    final_x = -final_x
+                if final_x > platform_x + 40:
+                    comm.send_instruction(scene_info.frame, PlatformAction.MOVE_RIGHT)
+                elif final_x < platform_x:
+                    comm.send_instruction(scene_info.frame, PlatformAction.MOVE_LEFT)
+                else:
+                    comm.send_instruction(scene_info.frame, PlatformAction.NONE)
