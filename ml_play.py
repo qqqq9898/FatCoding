@@ -1,12 +1,13 @@
 """
 The template of the main script of the machine learning process
 """
-
+import numpy as np
+import pickle
 import games.arkanoid.communication as comm
 from games.arkanoid.communication import ( \
     SceneInfo, GameStatus, PlatformAction
 )
-
+n = 0
 def ml_loop():
     """
     The main loop of the machine learning process
@@ -18,7 +19,7 @@ def ml_loop():
     is behind of the current frame in the game process. Try to decrease the fps
     to avoid this situation.
     """
-    ball_position_history = []
+    ball_pos_history = []
     # === Here is the execution order of the loop === #
     # 1. Put the initialization code here.
     ball_served = False
@@ -30,14 +31,14 @@ def ml_loop():
     while True:
         # 3.1. Receive the scene information sent from the game process.
         scene_info = comm.get_scene_info()
-        ball_position_history.append(scene_info.ball)
+        ball_pos_history.append(scene_info.ball)
         #判定球為上升還是落下
-        if (len(ball_position_history)) == 1:
+        if (len(ball_pos_history)) == 1:
             ball_godown = 0
-        elif ball_position_history[-1][1] - ball_position_history[-2][1] > 0: #[-1]代表倒數最後一列
+        elif ball_pos_history[-1][1] - ball_pos_history[-2][1] > 0: #[-1]代表倒數最後一列
             ball_godown = 1
-            vy = ball_position_history[-1][1]-ball_position_history[-2][1]
-            vx = ball_position_history[-1][0]-ball_position_history[-2][0]
+            vy = ball_pos_history[-1][1]-ball_pos_history[-2][1]
+            vx = ball_pos_history[-1][0]-ball_pos_history[-2][0]
             m = vy/vx
         else:
             ball_godown = 0
@@ -63,7 +64,7 @@ def ml_loop():
             ball_x = scene_info.ball[0] #the x of tuple(x, y)
             ball_y = scene_info.ball[1]
             platform_x = scene_info.platform[0]
-            if ball_godown == 1 and ball_y >= 90:
+            if ball_godown == 1 and ball_y >= 45:
                 final_x = (400 - ball_y)/m + ball_x
                 if final_x > 200:
                     final_x = 200 - (final_x - 200)
